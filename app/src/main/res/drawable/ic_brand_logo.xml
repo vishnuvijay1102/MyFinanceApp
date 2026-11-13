@@ -1,0 +1,68 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer Shield / Vault Crest (Sapphire Indigo -> Electric Cyan -> Violet) -->
+    <path
+        android:pathData="M54,12 L88,26 L88,54 C88,75 73,90 54,97 C35,90 20,75 20,54 L20,26 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="20"
+                android:startY="12"
+                android:endX="88"
+                android:endY="97">
+                <item android:offset="0" android:color="#FF6366F1" />
+                <item android:offset="0.52" android:color="#FF0EA5E9" />
+                <item android:offset="1" android:color="#FF7C3AED" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Inner Glass Highlights -->
+    <path
+        android:pathData="M54,17 L83,29 L83,54 C83,72 70,85 54,91 C38,85 25,72 25,54 L25,29 Z"
+        android:fillColor="#18FFFFFF"
+        android:strokeWidth="1.2"
+        android:strokeColor="#66FFFFFF" />
+
+    <!-- Ascending Financial Ledger Bars -->
+    <path
+        android:pathData="M36,68 L36,56 C36,54.3 37.3,53 39,53 L43,53 C44.7,53 46,54.3 46,56 L46,68 C46,69.7 44.7,71 43,71 L39,71 C37.3,71 36,69.7 36,68 Z"
+        android:fillColor="#FFFFFFFF" />
+
+    <path
+        android:pathData="M49,68 L49,47 C49,45.3 50.3,44 52,44 L56,44 C57.7,44 59,45.3 59,47 L59,68 C59,69.7 57.7,71 56,71 L52,71 C50.3,71 49,69.7 49,68 Z"
+        android:fillColor="#FFBAE6FD" />
+
+    <path
+        android:pathData="M62,68 L62,36 C62,34.3 63.3,33 65,33 L69,33 C70.7,33 72,34.3 72,36 L72,68 C72,69.7 70.7,71 69,71 L65,71 C63.3,71 62,69.7 62,68 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="62"
+                android:startY="33"
+                android:endX="72"
+                android:endY="71">
+                <item android:offset="0" android:color="#FFF59E0B" />
+                <item android:offset="1" android:color="#FFFB7185" />
+            </gradient>
+        </aapt:attr>
+    </path>
+
+    <!-- Upward Trend Accent Line -->
+    <path
+        android:pathData="M34,48 L47,38 L58,42 L72,27"
+        android:strokeWidth="3.2"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+
+    <!-- Trend Node Dot -->
+    <path
+        android:pathData="M72,24 A3,3 0 1,1 71.99,24 Z"
+        android:fillColor="#FFFBBF24" />
+</vector>

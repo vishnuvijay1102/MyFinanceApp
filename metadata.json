@@ -1,0 +1,6 @@
+{
+  "name": "MyFinance",
+  "description": "Comprehensive personal finance manager for daily income, expenses, bank balances, loans, credit cards, EMIs, and recurring bills.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
