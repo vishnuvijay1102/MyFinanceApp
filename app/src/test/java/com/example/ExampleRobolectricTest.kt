@@ -2,6 +2,7 @@ package com.example
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.flow.firstOrNull
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -54,5 +55,42 @@ class ExampleRobolectricTest {
     assertEquals(2, posted.actions.size)
     assertEquals("Confirm & Save", posted.actions[0].title.toString())
     assertEquals("Ignore", posted.actions[1].title.toString())
+  }
+
+  @Test
+  fun `dashboard preferences persist swapped cards, hidden sections, and reset`() = kotlinx.coroutines.test.runTest {
+    val context = ApplicationProvider.getApplicationContext<Context>()
+    val prefs = com.example.data.preferences.DashboardPreferencesRepository(context)
+    prefs.resetToDefault()
+
+    val customCards = com.example.data.preferences.DashboardMetricCard.defaultCards.map {
+      if (it == com.example.data.preferences.DashboardMetricCard.CURRENT_BALANCE) {
+        com.example.data.preferences.DashboardMetricCard.MONTHLY_INCOME
+      } else {
+        it
+      }
+    }
+    prefs.saveMetricCards(customCards)
+    prefs.saveSectionLayout(
+      order = com.example.data.preferences.DashboardSection.defaultOrder.reversed(),
+      hidden = setOf(com.example.data.preferences.DashboardSection.EXPENSE_DONUT)
+    )
+
+    val loaded = prefs.layoutConfig.firstOrNull()
+    org.junit.Assert.assertNotNull(loaded)
+    assertEquals(customCards, loaded!!.metricCards)
+    assertEquals(
+      com.example.data.preferences.DashboardSection.defaultOrder.reversed(),
+      loaded.sectionOrder
+    )
+    assertEquals(
+      setOf(com.example.data.preferences.DashboardSection.EXPENSE_DONUT),
+      loaded.hiddenSections
+    )
+
+    prefs.resetToDefault()
+    val reset = prefs.layoutConfig.firstOrNull()!!
+    assertEquals(com.example.data.preferences.DashboardMetricCard.defaultCards, reset.metricCards)
+    assertEquals(emptySet<com.example.data.preferences.DashboardSection>(), reset.hiddenSections)
   }
 }

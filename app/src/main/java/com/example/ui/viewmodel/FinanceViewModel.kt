@@ -19,6 +19,10 @@ import com.example.data.entity.LoanEntity
 import com.example.data.entity.LoanRepaymentEntity
 import com.example.data.entity.RechargeEntity
 import com.example.data.entity.TransactionEntity
+import com.example.data.preferences.DashboardLayoutConfig
+import com.example.data.preferences.DashboardMetricCard
+import com.example.data.preferences.DashboardPreferencesRepository
+import com.example.data.preferences.DashboardSection
 import com.example.data.repository.FinanceRepository
 import com.example.data.repository.FinancialOverview
 import com.example.data.repository.UpcomingReminderItem
@@ -49,6 +53,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     private val database = DatabaseProvider.getDatabase(application)
     val repository = FinanceRepository(database, application)
+    private val dashboardPreferences = DashboardPreferencesRepository(application)
 
     // Transaction reporting period filter
     private val _transactionPeriod = MutableStateFlow<TimePeriod?>(null)
@@ -216,6 +221,86 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+
+    // Dashboard Layout Customization
+    val dashboardLayout: StateFlow<DashboardLayoutConfig> = dashboardPreferences.layoutConfig.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = DashboardLayoutConfig()
+    )
+
+    fun swapMetricCard(index: Int, replacement: DashboardMetricCard) {
+        viewModelScope.launch {
+            val current = dashboardLayout.value.metricCards.toMutableList()
+            if (index !in current.indices) return@launch
+            val existingIndex = current.indexOf(replacement)
+            if (existingIndex >= 0 && existingIndex != index) {
+                val previous = current[index]
+                current[index] = replacement
+                current[existingIndex] = previous
+            } else {
+                current[index] = replacement
+            }
+            dashboardPreferences.saveMetricCards(current)
+        }
+    }
+
+    fun moveMetricCard(index: Int, delta: Int) {
+        viewModelScope.launch {
+            val current = dashboardLayout.value.metricCards.toMutableList()
+            val target = index + delta
+            if (index !in current.indices || target !in current.indices) return@launch
+            val item = current.removeAt(index)
+            current.add(target, item)
+            dashboardPreferences.saveMetricCards(current)
+        }
+    }
+
+    fun addMetricCard(card: DashboardMetricCard) {
+        viewModelScope.launch {
+            val current = dashboardLayout.value.metricCards
+            if (card !in current) {
+                dashboardPreferences.saveMetricCards(current + card)
+            }
+        }
+    }
+
+    fun removeMetricCard(card: DashboardMetricCard) {
+        viewModelScope.launch {
+            val current = dashboardLayout.value.metricCards.filter { it != card }
+            dashboardPreferences.saveMetricCards(current)
+        }
+    }
+
+    fun moveSection(index: Int, delta: Int) {
+        viewModelScope.launch {
+            val currentLayout = dashboardLayout.value
+            val order = currentLayout.sectionOrder.toMutableList()
+            val target = index + delta
+            if (index !in order.indices || target !in order.indices) return@launch
+            val item = order.removeAt(index)
+            order.add(target, item)
+            dashboardPreferences.saveSectionLayout(order, currentLayout.hiddenSections)
+        }
+    }
+
+    fun toggleSectionVisibility(section: DashboardSection) {
+        viewModelScope.launch {
+            val currentLayout = dashboardLayout.value
+            val updatedHidden = if (section in currentLayout.hiddenSections) {
+                currentLayout.hiddenSections - section
+            } else {
+                currentLayout.hiddenSections + section
+            }
+            dashboardPreferences.saveSectionLayout(currentLayout.sectionOrder, updatedHidden)
+        }
+    }
+
+    fun resetDashboardLayout() {
+        viewModelScope.launch {
+            dashboardPreferences.resetToDefault()
+        }
+    }
 
     // CRUD Methods
     fun addTransaction(transaction: TransactionEntity) {

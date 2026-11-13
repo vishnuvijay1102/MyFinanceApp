@@ -42,6 +42,8 @@ import androidx.compose.material.icons.filled.Savings
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Subscriptions
 import androidx.compose.material.icons.filled.TrendingDown
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -84,6 +86,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.entity.AccountEntity
 import com.example.data.entity.CategoryEntity
 import com.example.data.entity.TransactionEntity
+import com.example.data.preferences.DashboardMetricCard
+import com.example.data.preferences.DashboardSection
+import com.example.data.repository.FinancialOverview
 import com.example.data.repository.UpcomingReminderItem
 import com.example.service.ReminderNotificationManager
 import com.example.ui.components.CompactTextField
@@ -127,9 +132,11 @@ fun DashboardScreen(
     val recentTxns by viewModel.recentTransactions.collectAsStateWithLifecycle()
     val reminders by viewModel.upcomingReminders.collectAsStateWithLifecycle()
     val categories by viewModel.allCategories.collectAsStateWithLifecycle()
+    val dashboardLayout by viewModel.dashboardLayout.collectAsStateWithLifecycle()
 
     val context = LocalContext.current
     var showAddTxnDialog by remember { mutableStateOf(false) }
+    var showCustomizeDialog by remember { mutableStateOf(false) }
     var updatingAccountBalance by remember { mutableStateOf<AccountEntity?>(null) }
     var pendingReminder by remember { mutableStateOf<UpcomingReminderItem?>(null) }
 
@@ -206,251 +213,275 @@ fun DashboardScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(IndigoAccent.copy(alpha = 0.16f), CyanAccent.copy(alpha = 0.16f))
-                                )
-                            )
-                            .border(
-                                1.dp,
-                                IndigoAccent.copy(alpha = 0.30f),
-                                RoundedCornerShape(10.dp)
-                            )
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            text = "Monthly View",
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                            color = IndigoAccent
-                        )
-                    }
-                }
-            }
-
-            // SECTION A: Total Available Balance Hero Card
-            item {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(
-                            1.dp,
-                            Brush.linearGradient(
-                                listOf(
-                                    Color.White.copy(alpha = 0.34f),
-                                    CyanAccent.copy(alpha = 0.32f),
-                                    Color.White.copy(alpha = 0.08f)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    Brush.horizontalGradient(
+                                        listOf(IndigoAccent.copy(alpha = 0.16f), CyanAccent.copy(alpha = 0.16f))
+                                    )
                                 )
-                            ),
-                            RoundedCornerShape(24.dp)
-                        )
-                        .testTag("available_funds_card"),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Brush.linearGradient(HeroBrandGradient))
-                            .padding(20.dp)
-                    ) {
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "TOTAL AVAILABLE BALANCE",
-                                        style = MaterialTheme.typography.labelMedium.copy(
-                                            letterSpacing = 1.sp,
-                                            fontWeight = FontWeight.SemiBold
-                                        ),
-                                        color = Color.White.copy(alpha = 0.8f)
-                                    )
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text(
-                                        text = formatCurrency(overview.totalAvailableFunds),
-                                        style = MaterialTheme.typography.headlineLarge.copy(
-                                            fontWeight = FontWeight.ExtraBold,
-                                            letterSpacing = (-1).sp
-                                        ),
-                                        color = Color.White
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .clip(CircleShape)
-                                        .background(Color.White.copy(alpha = 0.2f))
-                                        .padding(10.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Payments,
-                                        contentDescription = "Available Balance",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(28.dp)
-                                    )
-                                }
-                            }
+                                .border(
+                                    1.dp,
+                                    IndigoAccent.copy(alpha = 0.30f),
+                                    RoundedCornerShape(10.dp)
+                                )
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Text(
+                                text = "Monthly View",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = IndigoAccent
+                            )
+                        }
 
-                            Spacer(modifier = Modifier.height(18.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        IconButton(
+                            onClick = { showCustomizeDialog = true },
+                            modifier = Modifier
+                                .size(48.dp)
+                                .testTag("customize_dashboard_button")
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(ObsidianBlack.copy(alpha = 0.85f))
+                                    .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(10.dp)),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = "Savings / Current",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White.copy(alpha = 0.7f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Text(
-                                        text = "${formatCurrency(overview.totalSavingsBalance)} / ${formatCurrency(overview.totalCurrentBalance)}",
-                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                        color = Color.White,
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                }
-                                Column(
-                                    horizontalAlignment = Alignment.End,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    Text(
-                                        text = "Monthly Income / Expense",
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = Color.White.copy(alpha = 0.7f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis
-                                    )
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text(
-                                            text = "+${formatCurrency(overview.periodIncome)}",
-                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                            color = Color(0xFF7DD3FC),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            text = " / -${formatCurrency(overview.periodExpense)}",
-                                            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
-                                            color = Color(0xFFFDA4AF),
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                    }
-                                }
+                                Icon(
+                                    imageVector = Icons.Default.Tune,
+                                    contentDescription = "Customize Dashboard",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                         }
                     }
                 }
             }
 
-            // Financial Summary Metrics Grid with Contrasting Gradient Accents
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(
+            if (dashboardLayout.visibleSections.isEmpty()) {
+                item(key = "empty_dashboard_layout") {
+                    GlassCard(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        shape = RoundedCornerShape(20.dp),
+                        accentTint = IndigoAccent
                     ) {
-                        MetricStatCard(
-                            title = "Savings Balance",
-                            amount = overview.totalSavingsBalance,
-                            subtitle = "Savings accounts",
-                            icon = Icons.Default.Savings,
-                            iconColor = SkyAccent,
-                            gradientColors = listOf(SkyAccent, CyanAccent),
-                            modifier = Modifier.weight(1f)
-                        )
-                        MetricStatCard(
-                            title = "Current Balance",
-                            amount = overview.totalCurrentBalance,
-                            subtitle = "Current accounts",
-                            icon = Icons.Default.AccountBalance,
-                            iconColor = AmberAccent,
-                            gradientColors = listOf(GoldAccent, OrangeAccent),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        MetricStatCard(
-                            title = "Transferred Funds",
-                            amount = overview.totalTransferredBalance,
-                            subtitle = "Transferred / Cash",
-                            icon = Icons.Default.Payments,
-                            iconColor = PrimaryIndigo,
-                            gradientColors = listOf(PrimaryIndigo, VioletAccent),
-                            modifier = Modifier.weight(1f)
-                        )
-                        MetricStatCard(
-                            title = "Balance Spendings",
-                            amount = overview.calculatedSpendingFromBalanceUpdates,
-                            subtitle = "Calculated from updates",
-                            icon = Icons.Default.TrendingDown,
-                            iconColor = RoseAccent,
-                            gradientColors = listOf(RoseAccent, ExpenseRed),
-                            isNegative = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                    ) {
-                        MetricStatCard(
-                            title = "Credit Cards Due",
-                            amount = overview.totalCreditCardOutstanding,
-                            subtitle = "Outstanding bills",
-                            icon = Icons.Default.CreditCard,
-                            iconColor = VioletAccent,
-                            gradientColors = listOf(VioletAccent, RoseAccent),
-                            isNegative = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                        MetricStatCard(
-                            title = "Remaining EMIs",
-                            amount = overview.totalRemainingEmiLiabilities,
-                            subtitle = "Loan obligations",
-                            icon = Icons.Default.ReceiptLong,
-                            iconColor = CyanAccent,
-                            gradientColors = listOf(CyanAccent, IndigoAccent),
-                            isNegative = true,
-                            modifier = Modifier.weight(1f)
-                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Text(
+                                text = "All dashboard sections are hidden",
+                                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+                                color = Color.White
+                            )
+                            Button(
+                                onClick = { showCustomizeDialog = true },
+                                colors = ButtonDefaults.buttonColors(containerColor = PrimaryIndigo, contentColor = Color.White)
+                            ) {
+                                Text("Customize Dashboard")
+                            }
+                        }
                     }
                 }
             }
 
-            // SECTION B: Expense Analytics (Donut Pie Chart & Income vs Expense Bar Chart)
-            item {
-                DonutPieChart(
-                    slices = slices,
-                    totalAmount = overview.periodExpense
-                )
-            }
+            dashboardLayout.visibleSections.forEach { section ->
+                when (section) {
+                    DashboardSection.HERO_BALANCE -> {
+                        // SECTION A: Total Available Balance Hero Card
+                        item(key = "section_hero_balance") {
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .animateItem()
+                                    .border(
+                                        1.dp,
+                                        Brush.linearGradient(
+                                            listOf(
+                                                Color.White.copy(alpha = 0.34f),
+                                                CyanAccent.copy(alpha = 0.32f),
+                                                Color.White.copy(alpha = 0.08f)
+                                            )
+                                        ),
+                                        RoundedCornerShape(24.dp)
+                                    )
+                                    .testTag("available_funds_card"),
+                                shape = RoundedCornerShape(24.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(Brush.linearGradient(HeroBrandGradient))
+                                        .padding(20.dp)
+                                ) {
+                                    Column {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            modifier = Modifier.fillMaxWidth()
+                                        ) {
+                                            Column {
+                                                Text(
+                                                    text = "TOTAL AVAILABLE BALANCE",
+                                                    style = MaterialTheme.typography.labelMedium.copy(
+                                                        letterSpacing = 1.sp,
+                                                        fontWeight = FontWeight.SemiBold
+                                                    ),
+                                                    color = Color.White.copy(alpha = 0.8f)
+                                                )
+                                                Spacer(modifier = Modifier.height(4.dp))
+                                                Text(
+                                                    text = formatCurrency(overview.totalAvailableFunds),
+                                                    style = MaterialTheme.typography.headlineLarge.copy(
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        letterSpacing = (-1).sp
+                                                    ),
+                                                    color = Color.White
+                                                )
+                                            }
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(CircleShape)
+                                                    .background(Color.White.copy(alpha = 0.2f))
+                                                    .padding(10.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Payments,
+                                                    contentDescription = "Available Balance",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(28.dp)
+                                                )
+                                            }
+                                        }
 
-            item {
-                IncomeExpenseBarChart(
-                    income = overview.periodIncome,
-                    expense = overview.periodExpense
-                )
-            }
+                                        Spacer(modifier = Modifier.height(18.dp))
 
-            // SECTION C: Bank Accounts Overview Cards
-            item {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                        ) {
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "Savings / Current",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = Color.White.copy(alpha = 0.7f),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Text(
+                                                    text = "${formatCurrency(overview.totalSavingsBalance)} / ${formatCurrency(overview.totalCurrentBalance)}",
+                                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                                    color = Color.White,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                            }
+                                            Column(
+                                                horizontalAlignment = Alignment.End,
+                                                modifier = Modifier.weight(1f)
+                                            ) {
+                                                Text(
+                                                    text = "Monthly Income / Expense",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = Color.White.copy(alpha = 0.7f),
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
+                                                )
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Text(
+                                                        text = "+${formatCurrency(overview.periodIncome)}",
+                                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                                        color = Color(0xFF7DD3FC),
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                    Text(
+                                                        text = " / -${formatCurrency(overview.periodExpense)}",
+                                                        style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                                        color = Color(0xFFFDA4AF),
+                                                        maxLines = 1,
+                                                        overflow = TextOverflow.Ellipsis
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    DashboardSection.METRIC_GRID -> {
+                        if (dashboardLayout.metricCards.isNotEmpty()) {
+                            item(key = "section_metric_grid") {
+                                val upcomingTotal = reminders.sumOf { it.amount }
+                                Column(
+                                    modifier = Modifier.animateItem(),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    dashboardLayout.metricCards.chunked(2).forEach { rowCards ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            rowCards.forEach { card ->
+                                                DashboardMetricCardTile(
+                                                    card = card,
+                                                    overview = overview,
+                                                    upcomingDuesTotal = upcomingTotal,
+                                                    onNavigateToAccounts = onNavigateToAccounts,
+                                                    onNavigateToTransactions = onNavigateToTransactions,
+                                                    onNavigateToRecords = onNavigateToRecords,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                            }
+                                            if (rowCards.size == 1) {
+                                                Spacer(modifier = Modifier.weight(1f))
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    DashboardSection.EXPENSE_DONUT -> {
+                        // SECTION B1: Expense Analytics Donut Pie Chart
+                        item(key = "section_expense_donut") {
+                            DonutPieChart(
+                                slices = slices,
+                                totalAmount = overview.periodExpense,
+                                modifier = Modifier.animateItem()
+                            )
+                        }
+                    }
+
+                    DashboardSection.INCOME_EXPENSE_BAR -> {
+                        // SECTION B2: Income vs Expense Bar Chart
+                        item(key = "section_income_expense_bar") {
+                            IncomeExpenseBarChart(
+                                income = overview.periodIncome,
+                                expense = overview.periodExpense,
+                                modifier = Modifier.animateItem()
+                            )
+                        }
+                    }
+
+                    DashboardSection.BANK_ACCOUNTS -> {
+            item(key = "section_accounts_header") {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().animateItem(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -466,9 +497,9 @@ fun DashboardScreen(
             }
 
             if (accounts.isEmpty()) {
-                item {
+                item(key = "section_accounts_empty") {
                     GlassCard(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().animateItem(),
                         shape = RoundedCornerShape(18.dp),
                         accentTint = IndigoAccent,
                         gradientColors = listOf(IndigoAccent, CyanAccent)
@@ -517,8 +548,9 @@ fun DashboardScreen(
                     }
                 }
             } else {
-                item {
+                item(key = "section_accounts_row") {
                     LazyRow(
+                        modifier = Modifier.animateItem(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         items(accounts, key = { it.id }) { acc ->
@@ -609,12 +641,13 @@ fun DashboardScreen(
                     }
                 }
             }
+                    }
 
-            // SECTION F: Upcoming Reminders
+                    DashboardSection.UPCOMING_REMINDERS -> {
             if (reminders.isNotEmpty()) {
-                item {
+                item(key = "section_reminders_header") {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().animateItem(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -629,9 +662,9 @@ fun DashboardScreen(
                     }
                 }
 
-                item {
+                item(key = "section_reminders_card") {
                     GlassCard(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().animateItem(),
                         shape = RoundedCornerShape(20.dp),
                         accentTint = GoldAccent,
                         gradientColors = listOf(GoldAccent, RoseAccent)
@@ -739,11 +772,12 @@ fun DashboardScreen(
                     }
                 }
             }
+                    }
 
-            // SECTION G: Recent Transactions (10-15 latest)
-            item {
+                    DashboardSection.RECENT_TRANSACTIONS -> {
+            item(key = "section_recent_txns_header") {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().animateItem(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -759,10 +793,11 @@ fun DashboardScreen(
             }
 
             if (recentTxns.isEmpty()) {
-                item {
+                item(key = "section_recent_txns_empty") {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .animateItem()
                             .padding(24.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -781,6 +816,9 @@ fun DashboardScreen(
                     )
                 }
             }
+                    }
+                }
+            }
         }
 
         // Floating Action Button to Add Transaction
@@ -795,6 +833,21 @@ fun DashboardScreen(
         ) {
             Icon(imageVector = Icons.Default.Add, contentDescription = "Add Transaction")
         }
+    }
+
+    // Customize Dashboard Dialog
+    if (showCustomizeDialog) {
+        CustomizeDashboardDialog(
+            config = dashboardLayout,
+            onSwapMetricCard = { index, replacement -> viewModel.swapMetricCard(index, replacement) },
+            onMoveMetricCard = { index, delta -> viewModel.moveMetricCard(index, delta) },
+            onAddMetricCard = { card -> viewModel.addMetricCard(card) },
+            onRemoveMetricCard = { card -> viewModel.removeMetricCard(card) },
+            onMoveSection = { index, delta -> viewModel.moveSection(index, delta) },
+            onToggleSection = { section -> viewModel.toggleSectionVisibility(section) },
+            onResetToDefault = { viewModel.resetDashboardLayout() },
+            onDismiss = { showCustomizeDialog = false }
+        )
     }
 
     // Add Transaction Dialog
@@ -817,6 +870,146 @@ fun DashboardScreen(
                 updatingAccountBalance = null
             },
             onDismiss = { updatingAccountBalance = null }
+        )
+    }
+}
+
+@Composable
+private fun DashboardMetricCardTile(
+    card: DashboardMetricCard,
+    overview: FinancialOverview,
+    upcomingDuesTotal: Double,
+    onNavigateToAccounts: () -> Unit,
+    onNavigateToTransactions: () -> Unit,
+    onNavigateToRecords: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    when (card) {
+        DashboardMetricCard.SAVINGS_BALANCE -> MetricStatCard(
+            title = card.title,
+            amount = overview.totalSavingsBalance,
+            subtitle = card.subtitle,
+            icon = Icons.Default.Savings,
+            iconColor = SkyAccent,
+            gradientColors = listOf(SkyAccent, CyanAccent),
+            onClick = onNavigateToAccounts,
+            modifier = modifier
+        )
+        DashboardMetricCard.CURRENT_BALANCE -> MetricStatCard(
+            title = card.title,
+            amount = overview.totalCurrentBalance,
+            subtitle = card.subtitle,
+            icon = Icons.Default.AccountBalance,
+            iconColor = AmberAccent,
+            gradientColors = listOf(GoldAccent, OrangeAccent),
+            onClick = onNavigateToAccounts,
+            modifier = modifier
+        )
+        DashboardMetricCard.TRANSFERRED_FUNDS -> MetricStatCard(
+            title = card.title,
+            amount = overview.totalTransferredBalance,
+            subtitle = card.subtitle,
+            icon = Icons.Default.Payments,
+            iconColor = PrimaryIndigo,
+            gradientColors = listOf(PrimaryIndigo, VioletAccent),
+            onClick = onNavigateToAccounts,
+            modifier = modifier
+        )
+        DashboardMetricCard.BALANCE_SPENDINGS -> MetricStatCard(
+            title = card.title,
+            amount = overview.calculatedSpendingFromBalanceUpdates,
+            subtitle = card.subtitle,
+            icon = Icons.Default.TrendingDown,
+            iconColor = RoseAccent,
+            gradientColors = listOf(RoseAccent, ExpenseRed),
+            isNegative = true,
+            onClick = onNavigateToAccounts,
+            modifier = modifier
+        )
+        DashboardMetricCard.CREDIT_CARDS_DUE -> MetricStatCard(
+            title = card.title,
+            amount = overview.totalCreditCardOutstanding,
+            subtitle = card.subtitle,
+            icon = Icons.Default.CreditCard,
+            iconColor = VioletAccent,
+            gradientColors = listOf(VioletAccent, RoseAccent),
+            isNegative = true,
+            onClick = onNavigateToRecords,
+            modifier = modifier
+        )
+        DashboardMetricCard.REMAINING_EMIS -> MetricStatCard(
+            title = card.title,
+            amount = overview.totalRemainingEmiLiabilities,
+            subtitle = card.subtitle,
+            icon = Icons.Default.ReceiptLong,
+            iconColor = CyanAccent,
+            gradientColors = listOf(CyanAccent, IndigoAccent),
+            isNegative = true,
+            onClick = onNavigateToRecords,
+            modifier = modifier
+        )
+        DashboardMetricCard.MONTHLY_INCOME -> MetricStatCard(
+            title = card.title,
+            amount = overview.periodIncome,
+            subtitle = card.subtitle,
+            icon = Icons.Default.TrendingUp,
+            iconColor = SkyAccent,
+            gradientColors = listOf(SkyAccent, IndigoAccent),
+            onClick = onNavigateToTransactions,
+            modifier = modifier
+        )
+        DashboardMetricCard.MONTHLY_EXPENSE -> MetricStatCard(
+            title = card.title,
+            amount = overview.periodExpense,
+            subtitle = card.subtitle,
+            icon = Icons.Default.TrendingDown,
+            iconColor = ExpenseRed,
+            gradientColors = listOf(RoseAccent, OrangeAccent),
+            isNegative = true,
+            onClick = onNavigateToTransactions,
+            modifier = modifier
+        )
+        DashboardMetricCard.MONEY_LENT -> MetricStatCard(
+            title = card.title,
+            amount = overview.totalMoneyLent,
+            subtitle = card.subtitle,
+            icon = Icons.Default.Handshake,
+            iconColor = CyanAccent,
+            gradientColors = listOf(CyanAccent, SkyAccent),
+            onClick = onNavigateToRecords,
+            modifier = modifier
+        )
+        DashboardMetricCard.MONEY_BORROWED -> MetricStatCard(
+            title = card.title,
+            amount = overview.totalMoneyBorrowed,
+            subtitle = card.subtitle,
+            icon = Icons.Default.Handshake,
+            iconColor = WarningAmber,
+            gradientColors = listOf(GoldAccent, RoseAccent),
+            isNegative = true,
+            onClick = onNavigateToRecords,
+            modifier = modifier
+        )
+        DashboardMetricCard.UPCOMING_DUES -> MetricStatCard(
+            title = card.title,
+            amount = upcomingDuesTotal,
+            subtitle = card.subtitle,
+            icon = Icons.Default.NotificationsActive,
+            iconColor = GoldAccent,
+            gradientColors = listOf(GoldAccent, OrangeAccent),
+            isNegative = upcomingDuesTotal > 0,
+            onClick = onNavigateToRecords,
+            modifier = modifier
+        )
+        DashboardMetricCard.AVAILABLE_FUNDS -> MetricStatCard(
+            title = card.title,
+            amount = overview.totalAvailableFunds,
+            subtitle = card.subtitle,
+            icon = Icons.Default.Payments,
+            iconColor = PrimaryIndigo,
+            gradientColors = listOf(PrimaryIndigo, CyanAccent),
+            onClick = onNavigateToAccounts,
+            modifier = modifier
         )
     }
 }
